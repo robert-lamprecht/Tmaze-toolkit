@@ -1,0 +1,20 @@
+Metadata-Version: 2.4
+Name: tmaze-toolkit
+Version: 0.1
+Summary: A package for analyzing Tmaze data from experimental videos
+Author: Robert Lamprecht
+Author-email: rlampre@emory.edu
+Keywords: video analysis,motion detection,behavioral experiments
+Requires-Python: >=3.7
+Requires-Dist: numpy
+Requires-Dist: opencv-python
+Requires-Dist: matplotlib
+Requires-Dist: scipy
+Requires-Dist: pandas
+Requires-Dist: tqdm
+Dynamic: author
+Dynamic: author-email
+Dynamic: keywords
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
