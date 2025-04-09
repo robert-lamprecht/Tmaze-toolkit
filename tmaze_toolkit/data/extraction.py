@@ -110,7 +110,8 @@ def process_frame_batch(batch):
     return results
 
 # Main function to extract door traces from a video
-def extractDoorTraces(video, door_coords):
+def extractDoorTraces(video, door_coords, ret = False):
+    #Optional Set ret to true to return the original door traces array
     print('On video {}'.format(video))
     vid = cv2.VideoCapture(video)
     length = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -154,6 +155,7 @@ def extractDoorTraces(video, door_coords):
     vid.release()
     cv2.destroyAllWindows()
     
+    
     # Save the door traces to a pickle file
     output_file = video.split('.')[0] + '_doorTraces.pkl'
     try:
@@ -162,3 +164,6 @@ def extractDoorTraces(video, door_coords):
         print(f"Successfully saved door traces to {output_file}")
     except Exception as e:
         print(f"Failed to save door traces: {e}")
+
+    if ret == True: 
+        return doorTraces
