@@ -159,9 +159,13 @@ def extractDoorTraces(video, door_coords, ret = False):
     # Save the door traces to a pickle file
     output_file = video.split('.')[0] + '_doorTraces.pkl'
     try:
+        print("Starting save operation...")
+        file_size_estimate = sum(len(v) for v in doorTraces.values()) * 8 / (1024*1024)  # Rough size in MB
+        print(f"Estimated file size: ~{file_size_estimate:.2f} MB")
+        start_time = time.time()
         with open(output_file, 'wb') as f:
             pickle.dump(doorTraces, f, protocol=pickle.HIGHEST_PROTOCOL)
-        print(f"Successfully saved door traces to {output_file}")
+        print(f"Save completed in {time.time() - start_time:.2f} seconds")
     except Exception as e:
         print(f"Failed to save door traces: {e}")
 
