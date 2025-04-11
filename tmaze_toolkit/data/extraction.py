@@ -12,8 +12,8 @@ initial_coords = {
     'door2': [13, 125],
     'door3': [217, 183],
     'door4': [223, 16],
-    'floor1': [50, 90],
-    'floor2': [200, 90]
+    'door5': [50, 98], # Floor 1 but it makes it easier to use door prefix in a loop later in the code
+    'door6': [200, 98] # Floor 2
 }
 
 # Define colors for drawing rectangles
@@ -100,7 +100,7 @@ def process_frame_batch(batch):
 
         doorImages = {}
         # Extract door regions from the thresholded image
-        for door in range(4):
+        for door in range(6):
             doorkey = 'door{}'.format(door + 1)
             doorImages[doorkey] = thresh[dc[doorkey][1] - 7: dc[doorkey][1] + 7, dc[doorkey][0] - 7: dc[doorkey][0] + 7]
 
@@ -143,7 +143,7 @@ def extractDoorTraces(video, door_coords):
         pool.join()  # Ensure the pool is properly closed and joined
 
     # Initialize door traces dictionary
-    doorTraces = {f'door{door+1}': [] for door in range(4)}
+    doorTraces = {f'door{door+1}': [] for door in range(6)}
     # Aggregate results from all batches
     for results in all_results:
         for result in results:
