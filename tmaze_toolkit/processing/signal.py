@@ -1,5 +1,14 @@
 import numpy as np
+from scipy.ndimage import gaussian_filter1d
 from scipy.signal import butter, filtfilt
+import matplotlib.pyplot as plt
+from tmaze_toolkit.visualization.plotDoorTraces import plotDoorTraces
+from tmaze_toolkit.processing.extractTrialTimes import pad_movement
+
+def gaussian_filter(data, sigma=5):
+    for key in data.keys():
+        data[key] = gaussian_filter1d(data[key], sigma)
+    return data
 
 def bandpass_filter(data, lowcut=0.1, highcut=3.0, fs=30.0, order=4):
     """
@@ -45,7 +54,7 @@ def bandpass_filter(data, lowcut=0.1, highcut=3.0, fs=30.0, order=4):
         # If input is an array, apply filter directly
         return filtfilt(b, a, data)
 
-def process_door_traces(door_traces, lowcut=0.1, highcut=3.0, fs=30.0, order=4, n_std = 2.5):
+def process_door_traces(door_traces, lowcut=0.1, highcut=3.0, fs=30.0, order=4, n_std = 2.5, plot=False):
     """
     Process door traces by applying a band-pass filter.
     
@@ -78,16 +87,37 @@ def process_door_traces(door_traces, lowcut=0.1, highcut=3.0, fs=30.0, order=4, 
     # Apply the band-pass filter to the normalized traces
     filtered_traces = bandpass_filter(normalized_traces, lowcut, highcut, fs, order)
 
+    # Apply a Gaussian filter to the filtered traces
+    filtered_traces = gaussian_filter(filtered_traces)
+
     # Calculate thresholds based on statistics for each door
     thresholds = {}
 
     for key in filtered_traces.keys():
-        # Calculate mean and standard deviation of the trace
         mean = np.mean(filtered_traces[key])
         std = np.std(filtered_traces[key])
+        # Calculate mean and standard deviation of the trace
+        if key == 'door5' or key == 'door6':
+            n_std = .75 # This value can be adjusted to change sensitivity
+        else:
+            n_std = 2.5 # This value can be adjusted to change sensitivity
         #Set threshold as mean plus n standard deviations
         # Can adjust n to be more or less strict based on sensitivity needs
+        
         thresholds[key] = mean + (n_std * std)
+
+    if plot:
+        fig, axs = plt.subplots(6, 1, figsize=(15, 10), sharex=True)
+        fig.suptitle('Thresholds over Door Traces')
+
+        for i, (door, trace) in enumerate(filtered_traces.items()):
+            axs[i].plot(trace)
+            axs[i].axhline(thresholds[door], color='r', linestyle='--', label='Threshold')
+            axs[i].set_title(f'{door} Trace with Threshold')
+            axs[i].set_ylabel('Motion')
+            axs[i].legend()
+
+        axs[-1].set_xlabel('Frame Number')  
     
     for key in filtered_traces.keys():
         for i in range(len(filtered_traces[key])):
@@ -96,4 +126,6 @@ def process_door_traces(door_traces, lowcut=0.1, highcut=3.0, fs=30.0, order=4, 
             else:
                 filtered_traces[key][i] = 0;
     
+    
+
     return filtered_traces
