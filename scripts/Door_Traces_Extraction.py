@@ -9,7 +9,7 @@ from tkinter.filedialog import askopenfilenames
 
 # user selects video files
 Tk().withdraw()
-videoFiles = askopenfilenames(initialdir=r'N:\TMAZE\TMAZE_REFIND_VID_NEW',defaultextension='.mp4',filetypes=[('Video Files', '*.mp4 *.avi'), ('All Files', '*.*')])
+videoFiles = askopenfilenames(initialdir=r'N:\TMAZE',defaultextension='.mp4',filetypes=[('Video Files', '*.mp4 *.avi'), ('All Files', '*.*')])
 
 initial_coords = {} ### default locations for door centers
 initial_coords['door1'] = [14, 36] # Floor Left
