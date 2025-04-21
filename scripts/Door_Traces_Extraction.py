@@ -52,7 +52,7 @@ def mouse(event,x,y,flags,params): ## defining the callback for the door selecti
         final_coords[door] = [x,y]
 
 def selectDoorCoords(video, initial_coords=initial_coords):
-    print('On video {}'.format())
+    print('On video {}'.format(video))
     vid = cv2.VideoCapture(video)
     if not vid.isOpened():
         print(f"Error: Could not open video {video} for coordinate selection.")
