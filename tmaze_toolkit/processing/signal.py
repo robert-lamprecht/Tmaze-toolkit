@@ -5,6 +5,15 @@ import matplotlib.pyplot as plt
 from tmaze_toolkit.visualization.plotDoorTraces import plotDoorTraces
 from tmaze_toolkit.processing.extractTrialTimes import pad_movement
 
+"""
+Version 2.0.0
+
+This version of the signal function no longer applies a band-pass or gaussian filter to the floor traces stored in door5 and door6.
+
+We found that this allows for a more reliable detection of the floor movements.
+
+"""
+
 def gaussian_filter(data, sigma=5):
     for key in data.keys():
         data[key] = gaussian_filter1d(data[key], sigma)
@@ -78,9 +87,15 @@ def process_door_traces(door_traces, lowcut=0.1, highcut=3.0, fs=30.0, order=4, 
     dict
         Dictionary with processed door traces.
     """
+    keys = [
+        'door1',
+        'door2',
+        'door3',
+        'door4'
+    ]
     # First, normalize by subtracting the mean
     normalized_traces = {}
-    for key in door_traces.keys():
+    for key in keys:
         trace_array = np.array(door_traces[key])
         normalized_traces[key] = trace_array - np.mean(trace_array)
     
@@ -90,6 +105,9 @@ def process_door_traces(door_traces, lowcut=0.1, highcut=3.0, fs=30.0, order=4, 
     # Apply a Gaussian filter to the filtered traces
     filtered_traces = gaussian_filter(filtered_traces)
 
+    filtered_traces['door5'] = door_traces['door5']
+    filtered_traces['door6'] = door_traces['door6']
+
     # Calculate thresholds based on statistics for each door
     thresholds = {}
 
@@ -98,7 +116,7 @@ def process_door_traces(door_traces, lowcut=0.1, highcut=3.0, fs=30.0, order=4, 
         std = np.std(filtered_traces[key])
         # Calculate mean and standard deviation of the trace
         if key == 'door5' or key == 'door6':
-            n_std = .75 # This value can be adjusted to change sensitivity
+            n_std = 2 # This value can be adjusted to change sensitivity
         else:
             n_std = 2.5 # This value can be adjusted to change sensitivity
         #Set threshold as mean plus n standard deviations

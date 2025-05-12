@@ -3,7 +3,36 @@ import numpy as np
 import cv2
 from tmaze_toolkit.processing.normalize import select_corners
 
-def plot_trajectory(jsonFile, videoFile, lick = 'left(V1)', bodyPart = 'UpperSpine', confidence_threshold = 0.01):
+def plot_select_trial_trajectories(jsonFile, videoFile, lick = 'left(V1)', bodyPart = 'UpperSpine', confidence_threshold = 0.01, trial_numbers = None):
+    "plot the trajectory of the animal in the video with different colors for each trial"
+    video = cv2.VideoCapture(videoFile)
+    ret, frame = video.read()
+    outDict = jsonFile
+    
+    # Create a single figure for all trials
+    plt.figure(figsize=(10, 8))
+    plt.imshow(frame, cmap='gray')
+    
+    # Create colormap for different trials
+    colors = plt.cm.rainbow(np.linspace(0, 1, len(trial_numbers)))
+    
+    for idx, k in enumerate(trial_numbers):
+        if type(k) == int and k in outDict:
+            if outDict[k]['lick'] == lick:
+                filt_x = np.copy(outDict[k]['trajectory'].droplevel(0,axis=1)[bodyPart]['x'])
+                filt_x[outDict[k]['trajectory'].droplevel(0,axis=1)[bodyPart]['likelihood'] < confidence_threshold] = np.nan
+                filt_y = np.copy(outDict[k]['trajectory'].droplevel(0,axis=1)[bodyPart]['y'])
+                filt_y[outDict[k]['trajectory'].droplevel(0,axis=1)[bodyPart]['likelihood'] < confidence_threshold] = np.nan
+                
+                plt.plot(filt_x, filt_y, color=colors[idx], label=f'Trial {outDict[k]["trial_number"]}')
+    
+    plt.title(f'Selected Trials - {bodyPart}')
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+    plt.show()
+    plt.close()
+
+def plot_trajectory(jsonFile, videoFile, lick = 'left(V1)', bodyPart = 'UpperSpine', confidence_threshold = 0.01, color='b'):
     "plot the trajectory of the animal in the video"
     video = cv2.VideoCapture(videoFile)
     ret, frame = video.read()
@@ -28,7 +57,7 @@ def plot_trajectory(jsonFile, videoFile, lick = 'left(V1)', bodyPart = 'UpperSpi
                 """
               
               
-                plt.plot(filt_x,filt_y, filt_x1, filt_y1, color='b')
+                plt.plot(filt_x,filt_y, color=color)
                 plt.title('Trial {}'.format(outDict[k]['trial_number']))
                 plt.show()
                 plt.close()

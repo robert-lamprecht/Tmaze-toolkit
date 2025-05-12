@@ -1,5 +1,25 @@
 import pandas as pd
 from tmaze_toolkit.data.jsonProcessing import load_json_files
+
+"""
+This script is a work in progress. New concurrent event detection has been added to the concurrent_movement.py file.
+
+New padding function has been added to the padding.py file.
+
+The issue we are experiencing with the current method stems from an unreliable signal from door 3.
+All missing events are due to missing the end of the trial because of door 3. 
+
+Before extracting trial times, plot your traces in the notebook to ensure that the signal is reliable.
+
+Some changes have been made to the signal function. We are no longer filtering the floor signals in doors 5 and 6.
+
+There are a couple of potential solutions:
+1. Regenerate the door traces with the area of interest placed in a better location for door 3.
+2. Use the floor traces to compensate for the issue.
+
+
+"""
+
 def find_concurrent_events(trace1, trace2, window_frames=15):
     """
     Find distinct trial events when two doors move concurrently.
