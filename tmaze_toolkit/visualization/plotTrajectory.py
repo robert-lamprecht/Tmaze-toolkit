@@ -28,7 +28,7 @@ def plot_trajectory(jsonFile, videoFile, lick = 'left(V1)', bodyPart = 'UpperSpi
                 """
               
               
-                plt.plot(filt_x,filt_y, filt_x1, filt_y1, color='b')
+                plt.plot(filt_x,filt_y, color='b')
                 plt.title('Trial {}'.format(outDict[k]['trial_number']))
                 plt.show()
                 plt.close()

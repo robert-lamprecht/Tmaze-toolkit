@@ -34,38 +34,90 @@ def find_concurrent_events(trace1, trace2, window_frames=15):
     return events
 
 def pad_movement(floor, window_pad):
+    """
+    Pad floor movement signal to handle noisy data and direction changes.
+    Uses a sliding window approach to connect nearby movements.
+    
+    Args:
+        floor (list): Binary floor movement signal
+        window_pad (int): Window size for padding
+        
+    Returns:
+        list: Padded floor movement signal
+    """
+    padded_floor = floor.copy()
+    
+    # First pass: forward padding
     for x in range(len(floor) - window_pad):
         if floor[x] == 1:
-            # Search for the next 1 in the next window_pad frames
-            for y in range(x + 1, x + window_pad):
+            # Look ahead for any movement within window
+            for y in range(x + 1, min(x + window_pad, len(floor))):
                 if floor[y] == 1:
-                    # If a 1 is found, set all values in between to 1
+                    # Fill all gaps between movements
                     for z in range(x + 1, y):
-                        floor[z] = 1
+                        padded_floor[z] = 1
                     break
-    return floor
+    
+    # Second pass: backward padding to catch reversed movements
+    for x in range(len(floor) - 1, window_pad, -1):
+        if padded_floor[x] == 1:
+            # Look backward for any movement within window
+            for y in range(x - 1, max(x - window_pad, -1), -1):
+                if padded_floor[y] == 1:
+                    # Fill all gaps between movements
+                    for z in range(x - 1, y, -1):
+                        padded_floor[z] = 1
+                    break
+    
+    # Third pass: clean up isolated movements
+    # If a movement is isolated (no other movements within window_pad), remove it
+    for x in range(window_pad, len(padded_floor) - window_pad):
+        if padded_floor[x] == 1:
+            # Check if there are any other movements in the window
+            has_neighbor = False
+            for y in range(x - window_pad, x + window_pad + 1):
+                if y != x and padded_floor[y] == 1:
+                    has_neighbor = True
+                    break
+            if not has_neighbor:
+                padded_floor[x] = 0
+    
+    return padded_floor
 
 def extract_floor_traces(dat, pad_frames=90):
+    """
+    Extract and process floor movement traces with improved padding.
+    
+    Args:
+        dat (dict): Dictionary containing door and floor data
+        pad_frames (int): Number of frames to pad floor movements
+        
+    Returns:
+        tuple: Lists of floor movement start and end frames
+    """
+    # Pad floor movements with a larger window to catch more related movements
     floor1 = pad_movement(dat['door5'], pad_frames)
     floor2 = pad_movement(dat['door6'], pad_frames)
-    floor_traces = []
-
-    # Add floor1 [x] to floor2 [x]
-    for x in range(len(floor1)):
-        floor_traces.append(floor1[x] + floor2[x])
     
+    # Combine floor traces
+    floor_traces = [f1 + f2 for f1, f2 in zip(floor1, floor2)]
+    
+    # Find continuous floor movements
     floor_starts = []
     floor_ends = []
     isMoving = False
+    
     for x in range(len(floor_traces)):
-        if floor_traces[x] == 2:
-            if isMoving == False:
-                floor_starts.append(x)
-                isMoving = True
-        if floor_traces[x] < 2:
-            if isMoving == True:
-                floor_ends.append(x)
-                isMoving = False
+        if floor_traces[x] == 2 and not isMoving:
+            floor_starts.append(x)
+            isMoving = True
+        elif floor_traces[x] < 2 and isMoving:
+            floor_ends.append(x)
+            isMoving = False
+    
+    # Handle case where floor is still moving at end of recording
+    if isMoving:
+        floor_ends.append(len(floor_traces) - 1)
     
     return floor_starts, floor_ends
 
@@ -113,39 +165,61 @@ def clean_trial_events(starts, ends, window_frames):
     return cleaned_starts, cleaned_ends
 
 def extract_trial_times(dat, window_frames=15, pad_frames=90, fps=30, use_floor_traces=False):
+    # Get floor movement signals
     floor_starts, floor_ends = extract_floor_traces(dat, pad_frames)
+    
+    # Get door movement signals
     trial_starts = find_concurrent_events(dat['door1'], dat['door2'], window_frames)
     trial_ends = find_concurrent_events(dat['door3'], dat['door4'], window_frames)
    
+    # Clean the door-based trial events
     cleaned_starts, cleaned_ends = clean_trial_events(trial_starts, trial_ends, window_frames)
 
-    print(f"Floor Starts: {len(floor_starts)}")
-    print(f"Floor Ends: {len(floor_ends)}")
-
-    print(f"Trial Starts: {len(cleaned_starts)}")
-    print(f"Trial Ends: {len(cleaned_ends)}")
-
-    if use_floor_traces:
-        cleaned_starts, cleaned_ends = clean_trial_events(floor_starts, floor_ends, window_frames)
+    # Create a list to store final trial times
+    final_starts = []
+    final_ends = []
     
+    # Use floor movement to help identify missing door movements
+    for i in range(len(floor_starts)):
+        floor_start = floor_starts[i]
+        floor_end = floor_ends[i]
+        
+        # Find the closest door start after this floor end
+        closest_door_start = None
+        for start in cleaned_starts:
+            if start > floor_end and (closest_door_start is None or start < closest_door_start):
+                closest_door_start = start
+        
+        # Find the closest door end before the next floor start
+        closest_door_end = None
+        for end in cleaned_ends:
+            if end < floor_start and (closest_door_end is None or end > closest_door_end):
+                closest_door_end = end
+        
+        # If we found both door movements, use them
+        if closest_door_start is not None and closest_door_end is not None:
+            final_starts.append(closest_door_start)
+            final_ends.append(closest_door_end)
+        # If we're missing a door movement, use floor signal as backup
+        else:
+            if closest_door_start is None:
+                final_starts.append(floor_end + 1)  # Add 1 frame to ensure it's after floor movement
+            else:
+                final_starts.append(closest_door_start)
+                
+            if closest_door_end is None:
+                final_ends.append(floor_start - 1)  # Subtract 1 frame to ensure it's before floor movement
+            else:
+                final_ends.append(closest_door_end)
 
-    floors_trials_df = pd.DataFrame({
-        'trial_start_frame': floor_starts,
-        'trial_end_frame': floor_ends,
-        'trial_start_time': [frame/fps for frame in floor_starts],
-        'trial_end_time': [frame/fps for frame in floor_ends],
-        'trial_duration': [(end - start)/fps for start, end in zip(floor_starts, floor_ends)]
-    })
-
+    # Create the final dataframe
     trials_df = pd.DataFrame({
-        'trial_start_frame': cleaned_starts,     # Frame numbers where trials begin
-        'trial_end_frame': cleaned_ends,         # Frame numbers where trials end
-        'trial_start_time': [frame/fps for frame in cleaned_starts],  # Convert frames to seconds
-        'trial_end_time': [frame/fps for frame in cleaned_ends]       # Convert frames to seconds
+        'trial_start_frame': final_starts,
+        'trial_end_frame': final_ends,
+        'trial_start_time': [frame/fps for frame in final_starts],
+        'trial_end_time': [frame/fps for frame in final_ends],
+        'trial_duration': [(end - start)/fps for start, end in zip(final_starts, final_ends)]
     })
-    for i in range(len(trials_df)):
-        if abs(trials_df['trial_end_frame'][i] - floors_trials_df['trial_start_frame'][i]) > 60:
-            print(f"Trial {i} likely has a missed detection in the doors 1 and 2")
 
     return trials_df
 
