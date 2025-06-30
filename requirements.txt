@@ -7,3 +7,4 @@ tqdm>=4.50.0
 jupyter>=1.0.0
 scikit-learn>=0.24.0
 tables>=3.6.1
+plotly>=5.0.0
