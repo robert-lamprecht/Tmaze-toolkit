@@ -14,6 +14,7 @@ def find_concurrent_events(trace1, trace2, window_frames=15):
     """
     events = []  # Store frame numbers where events start
     i = 0  # Initialize frame counter
+    is_moving = False  # Track if we're currently in a concurrent movement period
     
     # Loop through the traces, stopping window_frames before the end to prevent overflow
     while i < len(trace1) - window_frames:
@@ -22,13 +23,19 @@ def find_concurrent_events(trace1, trace2, window_frames=15):
         window2 = trace2[i:i+window_frames]  # Window for second door
         
         # Check if both doors show any movement (1's) in their windows
-        if 1 in window1 and 1 in window2:
-            # If both doors moved, record the start frame of this window
+        concurrent_movement = (1 in window1 and 1 in window2)
+        
+        if concurrent_movement and not is_moving:
+            # Start of a new concurrent movement event
             events.append(i)
-            # Skip ahead by the window size to avoid detecting the same event multiple times
-            i += window_frames
+            is_moving = True
+            i += 1  # Move to next frame to continue checking
+        elif not concurrent_movement and is_moving:
+            # End of concurrent movement period
+            is_moving = False
+            i += 1
         else:
-            # If no concurrent movement, check the next frame
+            # Either continuing current state or no movement
             i += 1
             
     return events

@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-def find_trial_events(trace1, trace2, window_frames):
+def find_trial_events(trace1, trace2, window_frames=15):
     """
     Find distinct trial events when two doors move concurrently.
     
@@ -15,6 +15,7 @@ def find_trial_events(trace1, trace2, window_frames):
     """
     events = []  # Store frame numbers where events start
     i = 0  # Initialize frame counter
+    is_moving = False  # Track if we're currently in a concurrent movement period
     
     # Loop through the traces, stopping window_frames before the end to prevent overflow
     while i < len(trace1) - window_frames:
@@ -23,16 +24,22 @@ def find_trial_events(trace1, trace2, window_frames):
         window2 = trace2[i:i+window_frames]  # Window for second door
         
         # Check if both doors show any movement (1's) in their windows
-        if 1 in window1 and 1 in window2:
-            # If both doors moved, record the start frame of this window
+        concurrent_movement = (1 in window1 and 1 in window2)
+        
+        if concurrent_movement and not is_moving:
+            # Start of a new concurrent movement event
             events.append(i)
-            # Skip ahead by the window size to avoid detecting the same event multiple times
-            i += window_frames
-        else:
-            # If no concurrent movement, check the next frame
+            is_moving = True
+            i += 1  # Move to next frame to continue checking
+        elif not concurrent_movement and is_moving:
+            # End of concurrent movement period
+            is_moving = False
             i += 1
-            
-    return events
+        else:
+            # Either continuing current state or no movement
+            i += 1
+    
+    return events  # FIXED: Added missing return statement
 
 def find_floor_trial_windows(floor_trace1, floor_trace2, window_frames):
     """
@@ -128,6 +135,73 @@ def validate_trials_in_window(trial_starts, trial_ends, window_start, window_end
             return start_frame, end_frame
     
     return None, None
+
+def validate_door_movements_in_windows(frames_df, door_data, window_frames=15):
+    """
+    Validate door movements within trial windows defined by frames_df.
+    
+    Args:
+        frames_df (DataFrame): DataFrame with columns 'trial_number', 'trial_time', 'end_time'
+        door_data (dict): Dictionary containing door traces with keys 'door1', 'door2', 'door3', 'door4'
+        window_frames (int): Window size for concurrent movement detection
+        
+    Returns:
+        DataFrame: DataFrame with columns trial_number, trial_time, end_time, start, stop, duration, valid
+    """
+    results = []
+    
+    for _, row in frames_df.iterrows():
+        trial_number = row['trial_number']
+        trial_time = row['trial_time']
+        end_time = row['end_time']
+        
+        # FIXED: Added bounds checking for slice indices
+        if trial_time >= len(door_data['door1']) or end_time > len(door_data['door1']):
+            print(f"Warning: Trial {trial_number} has invalid time bounds")
+            continue
+            
+        if trial_time >= end_time:
+            print(f"Warning: Trial {trial_number} has trial_time >= end_time")
+            continue
+      
+        # Find door movements within the trial window
+        # Look for doors 1+2 moving together (start)
+        start_events = find_trial_events(
+            door_data['door1'][trial_time:end_time], 
+            door_data['door2'][trial_time:end_time], 
+            window_frames
+        )
+        
+        # Look for doors 3+4 moving together (stop)
+        stop_events = find_trial_events(
+            door_data['door3'][trial_time:end_time], 
+            door_data['door4'][trial_time:end_time], 
+            window_frames
+        )
+        
+        # FIXED: Corrected the logic for validation
+        if len(start_events) == 0 or len(stop_events) == 0:
+            valid = "no"
+            start = start_events[0] if start_events else None
+            stop = stop_events[0] if stop_events else None
+            duration = None
+        else:
+            start = start_events[0]
+            stop = stop_events[0]
+            duration = stop - start if start is not None and stop is not None else None
+            valid = "yes"
+            
+        results.append({
+            'trial_number': trial_number,
+            'trial_time': trial_time,
+            'end_time': end_time,
+            'start': start,
+            'stop': stop,
+            'duration': duration,
+            'valid': valid
+        })
+    
+    return pd.DataFrame(results)
 
 def robust_trial_detection(door_data, fps=30, window_frames=15, tolerance=30):
     """
