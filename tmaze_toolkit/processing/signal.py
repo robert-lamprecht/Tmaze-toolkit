@@ -108,7 +108,7 @@ def process_door_traces(door_traces, lowcut=0.1, highcut=3.0, fs=30.0, order=4, 
         std = np.std(filtered_traces[key])
         # Calculate mean and standard deviation of the trace
         if key == 'door5' or key == 'door6':
-            n_std = .75 # This value can be adjusted to change sensitivity
+            n_std = 1.5 # This value can be adjusted to change sensitivity
         else:
             n_std = 2.5 # This value can be adjusted to change sensitivity
         #Set threshold as mean plus n standard deviations
