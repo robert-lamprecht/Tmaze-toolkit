@@ -3,7 +3,7 @@ Trial Annotator GUI
 ===================
 Interactive video tool for manually correcting missed trial detections.
 
-For each row in ``trials_df`` where ``trial_start_frame`` is NaN, the GUI
+For each row in ``trials_df`` where ``start_frame`` is NaN, the GUI
 seeks to the approximate location in the video and lets the user mark the
 trial start and end frame by pressing S / E (or clicking the buttons).
 
@@ -93,7 +93,7 @@ class TrialAnnotatorApp:
 
         # ── Missed trials ────────────────────────────────────────────────────
         self.missed_indices = self.trials_df.index[
-            self.trials_df['trial_start_frame'].isna()
+            self.trials_df['valid'] != 'yes'
         ].tolist()
         self.missed_pos = 0          # current position in missed_indices list
 
@@ -115,7 +115,7 @@ class TrialAnnotatorApp:
         if not self.missed_indices:
             messagebox.showinfo(
                 "No Missed Trials",
-                "No NaN entries found in 'trial_start_frame'. Nothing to annotate."
+                "No rows with valid == 'no' found. Nothing to annotate."
             )
         else:
             self._load_current_trial()
@@ -418,23 +418,10 @@ class TrialAnnotatorApp:
         """Return a frame number to seek to as a starting hint, or None."""
         row = self.trials_df.loc[row_idx]
 
-        # 1. Caller-specified column
-        if self.hint_frame_col and self.hint_frame_col in self.trials_df.columns:
-            val = row.get(self.hint_frame_col)
-            if pd.notna(val):
-                return int(val)
-
-        # 2. Common fallback columns
-        for col in ('floor_start_frame', 'hint_start_frame', 'expected_start_frame'):
-            if col in self.trials_df.columns:
-                val = row.get(col)
-                if pd.notna(val):
-                    return int(val)
-
-        # 3. Estimate from the last known trial end + small buffer
-        before = self.trials_df.loc[:row_idx - 1, 'trial_end_frame'].dropna()
-        if len(before) > 0:
-            return int(before.iloc[-1]) + int(self.fps * 5)
+        # Use trial_time — the window start where the actual start/stop must lie
+        val = row.get('trial_time')
+        if pd.notna(val):
+            return int(val)
 
         return None
 
@@ -497,10 +484,9 @@ class TrialAnnotatorApp:
         row_idx = self.missed_indices[self.missed_pos]
 
         # Revert any annotation we may have saved for this row
-        for col in ('trial_start_frame', 'trial_end_frame',
-                    'trial_start_time',  'trial_end_time'):
-            if col in self.trials_df.columns:
-                self.trials_df.at[row_idx, col] = np.nan
+        self.trials_df.at[row_idx, 'start'] = np.nan
+        self.trials_df.at[row_idx, 'stop']  = np.nan
+        self.trials_df.at[row_idx, 'valid'] = 'no'
 
         self._load_current_trial()
 
@@ -509,10 +495,10 @@ class TrialAnnotatorApp:
         self._load_current_trial()
 
     def _save_annotation(self, row_idx: int, start: int, end: int):
-        self.trials_df.at[row_idx, 'trial_start_frame'] = int(start)
-        self.trials_df.at[row_idx, 'trial_end_frame']   = int(end)
-        self.trials_df.at[row_idx, 'trial_start_time']  = start / self.fps
-        self.trials_df.at[row_idx, 'trial_end_time']    = end   / self.fps
+        self.trials_df.at[row_idx, 'start']    = int(start)
+        self.trials_df.at[row_idx, 'stop']     = int(end)
+        self.trials_df.at[row_idx, 'duration'] = end - start
+        self.trials_df.at[row_idx, 'valid']    = 'yes'
 
     # =========================================================================
     # UI label helpers
@@ -579,25 +565,21 @@ def annotate_trials(
     Launch an interactive GUI for manually annotating missed trials.
 
     Opens a video player that iterates through every row in ``trials_df``
-    where ``trial_start_frame`` is NaN.  For each such trial, the video
-    seeks to the approximate expected location so the user can watch the
-    footage and mark the exact start and end frame.
+    where ``start_frame`` is NaN.  For each such trial, the video seeks to
+    the approximate expected location (via ``window_start``) so the user
+    can watch the footage and mark the exact start and end frame.
 
     Parameters
     ----------
     video_path : str
         Path to the experiment video file (.mp4, .avi, etc.).
     trials_df : pd.DataFrame
-        DataFrame returned by ``extract_trial_times`` (or a merged variant
-        with NaN rows for missed trials).  Must contain at minimum:
-        ``trial_start_frame``, ``trial_end_frame``,
-        ``trial_start_time``, ``trial_end_time``.
+        DataFrame returned by ``validate_door_movements_in_windows``.  Must
+        contain: ``trial_time``, ``end_time``, ``start``, ``stop``,
+        ``duration``, ``valid`` ('yes'/'no').
     hint_frame_col : str, optional
-        Column in ``trials_df`` that provides the approximate frame number
-        for each missed trial (e.g. ``'floor_start_frame'``).  Used to
-        position the video before the user scrubs to the exact point.
-        Falls back to ``floor_start_frame`` and then to an estimate from
-        neighboring trials if not provided.
+        Override column for the seek hint frame.  If omitted, ``window_start``
+        is used automatically.
 
     Returns
     -------
