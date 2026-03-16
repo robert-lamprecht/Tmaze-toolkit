@@ -25,9 +25,56 @@ def plot_trajectory(jsonFile, videoFile, lick='left(V1)'):
     outDict = jsonFile
     
     for k in outDict:
+<<<<<<< HEAD
         if isinstance(k, int):  # Only process numeric trial keys
             if 'X' in outDict[k] and 'Y' in outDict[k] and outDict[k]['lick'] == lick:
                 plt.figure(figsize=(10, 8))
+=======
+        if type(k) == int:
+            if outDict[k]['lick'] == lick:
+                plt.figure()
+                plt.imshow(frame,cmap='gray')
+                filt_x = np.copy(outDict[k]['trajectory'].droplevel(0,axis=1)[bodyPart]['x'])
+                filt_x[outDict[k]['trajectory'].droplevel(0,axis=1)[bodyPart]['likelihood'] < confidence_threshold] = np.nan
+                filt_y = np.copy(outDict[k]['trajectory'].droplevel(0,axis=1)[bodyPart]['y'])
+                filt_y[outDict[k]['trajectory'].droplevel(0,axis=1)[bodyPart]['likelihood'] < confidence_threshold] = np.nan
+                
+                """"
+                filt_x1 = np.copy(outDict[k]['trajectory'].droplevel(0,axis=1)['TailBase']['x'])
+                filt_x1[outDict[k]['trajectory'].droplevel(0,axis=1)['TailBase']['likelihood'] < confidence_threshold] = np.nan
+                filt_y1 = np.copy(outDict[k]['trajectory'].droplevel(0,axis=1)['TailBase']['y'])
+                filt_y1[outDict[k]['trajectory'].droplevel(0,axis=1)['TailBase']['likelihood'] < confidence_threshold] = np.nan
+              
+                """
+              
+              
+                plt.plot(filt_x,filt_y, color='b')
+                plt.title('Trial {}'.format(outDict[k]['trial_number']))
+                plt.show()
+                plt.close()
+
+def plot_normalized_trajectory(jsonFile, videoFile, corners=None, lick='left(V1)', bodyPart='UpperSpine', confidence_threshold=0.01):
+    """Plot the normalized trajectory of the animal in the video"""
+    video = cv2.VideoCapture(videoFile)
+    ret, frame = video.read()
+    outDict = jsonFile
+    
+    # If corners aren't provided, ask user to select them
+    if corners is None:
+        corners = select_corners(videoFile)
+        if not corners:
+            print("Failed to get corners, cannot plot normalized trajectory")
+            return
+    
+    # Create a figure with original frame
+    plt.figure(figsize=(12, 6))
+    
+    for k in outDict:
+        if isinstance(k, int):
+            if outDict[k]['lick'] == lick and 'trajectoryOptomized' in outDict[k]:
+                # Create two subplots - original and normalized
+                plt.subplot(1, 2, 1)
+>>>>>>> b0be84f7cc7ed33273fb938588706bf1f2a2e924
                 plt.imshow(frame, cmap='gray')
                 
                 # Get X and Y data
