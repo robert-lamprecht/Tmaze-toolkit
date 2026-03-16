@@ -193,12 +193,6 @@ def normalize_trajectory(outDict, videoFile):
            
             x_transformed, y_transformed = input_numpy_array(x_original, y_original, corners)
 
-            """
-            # Update with transformed coordinates
-            outDict[trial_id]['trajectoryOptomized'].loc[:, (scorer, body_part, 'x')] = x  # Replace with transformed x
-            outDict[trial_id]['trajectoryOptomized'].loc[:, (scorer, body_part, 'y')] = y  # Replace with transformed y
-            """
-
             outDict[trial_id]['trajectoryOptomized'][(scorer, body_part, 'x')] = x_transformed  # Replace with transformed x
             outDict[trial_id]['trajectoryOptomized'][(scorer, body_part, 'y')] = y_transformed  # Replace with transformed y
     return outDict

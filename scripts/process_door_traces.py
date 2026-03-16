@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
-from tmaze_toolkit.processing.signal import process_door_traces
+# from tmaze_toolkit.processing.signal import process_door_traces
 
 def main():
     # Set up argument parser for command line options

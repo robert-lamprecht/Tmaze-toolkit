@@ -1,0 +1,43 @@
+4 Day experiment
+
+ATO 1:
+
+Day1:
+    Injection: 1
+Day2:
+    Injection: 2
+Day3:
+    Injection: 1
+Day4:
+    Injection: 2
+
+ATO 4:
+
+Day1:
+    Injection: 2
+Day2:
+    Injection: 1
+Day3:
+    Injection: 2
+Day4:
+    Injection: 1
+ATO 6:
+
+Day1:
+    Injection: 1
+Day2:
+    Injection: 2
+Day3:
+    Injection: 1
+Day4:
+    Injection: 2
+
+For all animals:
+
+Days 1-2:
+    Floor 1: 1 mm
+    Floor 2: .5 mm
+
+Days 3-4:
+    Floor 1: .75 mm
+    Floor 2: .25 mm

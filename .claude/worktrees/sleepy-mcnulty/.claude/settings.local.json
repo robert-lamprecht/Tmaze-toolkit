@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add requirements.txt tmaze_toolkit/visualization/__init__.py tmaze_toolkit/visualization/trial_annotator.py)",
+      "Bash(git commit:*)",
+      "Bash(git push -u origin claude/sleepy-mcnulty)",
+      "Bash(gh pr:*)"
+    ]
+  }
+}
