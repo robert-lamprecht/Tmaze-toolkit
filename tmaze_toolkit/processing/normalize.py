@@ -151,8 +151,8 @@ def normalize_points(x, y, corners):
     leftlineLength = calculate_length(point3, point4)
 
     # Find the ratio between intersectionXwithTopline and entire length of topline
-    ratioX = intersectionXwithTopline[0] / toplineLength
-    ratioY = intersectionYwithRightline[1] / rightlineLength
+    ratioX = calculate_length(point1, intersectionXwithTopline) / toplineLength
+    ratioY = calculate_length(point1, intersectionYwithRightline) / rightlineLength
 
 
     return ratioX, ratioY
