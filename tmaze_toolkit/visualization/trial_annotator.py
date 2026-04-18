@@ -407,9 +407,19 @@ class TrialAnnotatorApp:
             return
 
         row_idx = self.missed_indices[self.missed_pos]
-        hint    = self._get_hint_frame(row_idx)
+        row = self.trials_df.loc[row_idx]
+
+        # For no_stop trials, the start is already known — pre-populate it
+        if row.get('valid') == 'no_stop':
+            start_val = row.get('start')
+            if pd.notna(start_val):
+                self.pending_start = int(start_val)
+                self.start_btn.config(bg='#1a8c5a')
+                self._update_annotation_labels()
+
+        hint = self._get_hint_frame(row_idx)
         if hint is not None:
-            seek_to = max(0, hint - int(self.fps * 2))   # start 2 s before hint
+            seek_to = hint if row.get('valid') == 'no_stop' else max(0, hint - int(self.fps * 2))
             self._seek(seek_to)
 
         self._update_status()
@@ -418,7 +428,13 @@ class TrialAnnotatorApp:
         """Return a frame number to seek to as a starting hint, or None."""
         row = self.trials_df.loc[row_idx]
 
-        # Use trial_time — the window start where the actual start/stop must lie
+        # For no_stop trials the start frame is already known — seek there directly
+        if row.get('valid') == 'no_stop':
+            val = row.get('start')
+            if pd.notna(val):
+                return int(val)
+
+        # Default: use trial_time — the window start where the actual start/stop must lie
         val = row.get('trial_time')
         if pd.notna(val):
             return int(val)
